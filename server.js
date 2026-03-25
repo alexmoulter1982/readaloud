@@ -10,7 +10,15 @@ import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { v4 as uuidv4 } from 'uuid';
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+let anthropic = null;
+try {
+  if (process.env.ANTHROPIC_API_KEY) {
+    anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  }
+} catch (e) {
+  console.warn('Anthropic client init failed:', e.message);
+}
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -18,7 +26,7 @@ const PORT = process.env.PORT || 3000;
 const DATA_DIR = process.env.DATA_DIR || __dirname;
 
 // --- Startup checks ---
-const requiredEnvVars = ['OPENAI_API_KEY', 'ANTHROPIC_API_KEY'];
+const requiredEnvVars = ['OPENAI_API_KEY'];
 const missing = requiredEnvVars.filter(key => !process.env[key] || process.env[key].startsWith('your_'));
 
 if (missing.length > 0) {
@@ -412,6 +420,14 @@ app.get('/podcast/feed.xml', async (req, res) => {
 
   res.setHeader('Content-Type', 'application/rss+xml; charset=utf-8');
   res.send(xml);
+});
+
+// --- Global error handlers ---
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled rejection:', reason);
 });
 
 // --- Start ---
