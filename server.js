@@ -441,6 +441,6 @@ process.on('unhandledRejection', (reason) => {
 
 // --- Start ---
 console.log(`PORT env: ${process.env.PORT}, using PORT: ${PORT}`);
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`ReadAloud server running at http://0.0.0.0:${PORT}`);
+app.listen(PORT, () => {
+  console.log(`ReadAloud server running on PORT ${PORT}`);
 });
