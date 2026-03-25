@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#111111">
+  <title>ReadAloud</title>
+  <style>
+    :root {
+      --bg:          #111111;
+      --surface:     #1c1c1e;
+      --surface2:    #2c2c2e;
+      --border:      #38383a;
+      --accent:      #0a84ff;
+      --accent-dim:  rgba(10,132,255,0.15);
+      --text:        #ffffff;
+      --text-sub:    rgba(235,235,245,0.75);
+      --text-muted:  #636366;
+      --red:         #ff453a;
+      --green:       #30d158;
+      --radius:      12px;
+      --radius-sm:   8px;
+      --header-h:    56px;
+      --tab-bar-h:   49px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { height: 100%; }
+
+    body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior: none;
+    }
+
+    /* ── Header ── */
+    .app-header {
+      position: fixed;
+      inset: 0 0 auto 0;
+      height: calc(var(--header-h) + env(safe-area-inset-top));
+      padding-top: env(safe-area-inset-top);
+      background: rgba(17,17,17,0.88);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding-left: 20px;
+      padding-right: 20px;
+      z-index: 200;
+    }
+
+    .app-header h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+    }
+
+    .logo-dot { color: var(--accent); }
+
+    /* ── Main scroll area ── */
+    main {
+      padding-top: calc(var(--header-h) + env(safe-area-inset-top) + 4px);
+      padding-bottom: calc(var(--tab-bar-h) + env(safe-area-inset-bottom) + 16px);
+    }
+
+    /* ── Tab panels ── */
+    .tab-panel {
+      display: none;
+      padding: 20px 16px 0;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .tab-panel.active { display: block; }
+
+    /* ── Bottom tab bar ── */
+    .tab-bar {
+      position: fixed;
+      inset: auto 0 0 0;
+      height: calc(var(--tab-bar-h) + env(safe-area-inset-bottom));
+      padding-bottom: env(safe-area-inset-bottom);
+      background: rgba(28,28,30,0.94);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      padding-top: 6px;
+      z-index: 200;
+    }
+
+    .tab-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.2px;
+      padding: 4px 0;
+      cursor: pointer;
+      min-height: 44px;
+      -webkit-tap-highlight-color: transparent;
+      transition: color 0.18s;
+    }
+    .tab-btn.active { color: var(--accent); }
+
+    .tab-btn svg {
+      width: 24px; height: 24px;
+      stroke: currentColor; fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round; stroke-linejoin: round;
+      transition: transform 0.15s;
+    }
+    .tab-btn.active svg { transform: scale(1.08); }
+
+    /* ── Section labels ── */
+    .section-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.9px;
+      margin-bottom: 12px;
+    }
+
+    /* ── Method toggle ── */
+    .method-toggle {
+      display: flex;
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 3px;
+      margin-bottom: 20px;
+    }
+
+    .method-btn {
+      flex: 1;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 500;
+      padding: 9px 4px;
+      border-radius: calc(var(--radius) - 3px);
+      cursor: pointer;
+      min-height: 44px;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.18s, color 0.18s;
+    }
+    .method-btn.active {
+      background: var(--surface2);
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .method-panel { display: none; }
+    .method-panel.active { display: block; }
+
+    /* ── Form fields ── */
+    .field { margin-bottom: 16px; }
+
+    .field > label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      margin-bottom: 7px;
+    }
+
+    input[type="text"],
+    input[type="url"],
+    textarea,
+    select {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 16px;
+      font-family: inherit;
+      padding: 12px 14px;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+    ::placeholder { color: var(--text-muted); }
+
+    textarea {
+      resize: vertical;
+      min-height: 140px;
+      line-height: 1.55;
+    }
+
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23636366' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 38px;
+      cursor: pointer;
+    }
+    select option { background: #1c1c1e; }
+
+    /* ── File input ── */
+    .file-drop-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: var(--surface);
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 32px 20px;
+      cursor: pointer;
+      text-align: center;
+      min-height: 130px;
+      transition: border-color 0.18s, background 0.18s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .file-drop-label:hover,
+    .file-drop-label.has-file {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .file-drop-label svg {
+      width: 32px; height: 32px;
+      stroke: var(--text-muted); fill: none;
+      stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
+      transition: stroke 0.18s;
+    }
+    .file-drop-label.has-file svg { stroke: var(--accent); }
+    .file-drop-label .drop-text {
+      font-size: 14px;
+      color: var(--text-muted);
+      transition: color 0.18s;
+    }
+    .file-drop-label.has-file .drop-text { color: var(--accent); font-weight: 500; }
+    input[type="file"] { display: none; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      min-height: 50px;
+      padding: 13px 20px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 16px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.975); opacity: 0.85; }
+    .btn:disabled { opacity: 0.38; cursor: not-allowed; transform: none; }
+
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-secondary { background: var(--surface2); color: var(--text); }
+
+    /* ── Divider ── */
+    hr.divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 22px 0;
+    }
+
+    /* ── Preview card ── */
+    .preview-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 18px;
+    }
+    .preview-card h2 {
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.3;
+      margin-bottom: 10px;
+    }
+    .preview-body {
+      font-size: 14px;
+      color: var(--text-sub);
+      line-height: 1.65;
+      max-height: 130px;
+      overflow-y: auto;
+    }
+    .preview-body::-webkit-scrollbar { width: 3px; }
+    .preview-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* ── Speed row ── */
+    .speed-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .speed-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-sub);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .speed-row select { flex: 1; }
+
+    /* ── Audio result ── */
+    .audio-result {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-top: 16px;
+    }
+    .audio-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-sub);
+      margin-bottom: 10px;
+      line-height: 1.3;
+    }
+    audio {
+      width: 100%;
+      height: 44px;
+      border-radius: 6px;
+    }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Inline messages ── */
+    .msg {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      margin-bottom: 16px;
+      line-height: 1.45;
+    }
+    .msg.error  { background: rgba(255,69,58,0.14); border: 1px solid rgba(255,69,58,0.3); color: #ff6b61; }
+    .msg.success{ background: rgba(48,209,88,0.12); border: 1px solid rgba(48,209,88,0.25); color: #3dda68; }
+    .msg::before { flex-shrink: 0; margin-top: 1px; }
+    .msg.error::before  { content: '⚠'; }
+    .msg.success::before{ content: '✓'; }
+
+    /* ── Library cards ── */
+    .article-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    .article-card h3 {
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 8px;
+    }
+    .card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .chip {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: var(--surface2);
+      padding: 3px 9px;
+      border-radius: 20px;
+    }
+    .source-link {
+      display: block;
+      font-size: 12px;
+      color: var(--accent);
+      text-decoration: none;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-bottom: 12px;
+    }
+    .source-link:hover { text-decoration: underline; }
+
+    /* ── Delete button ── */
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .card-footer audio { flex: 1; margin-top: 0; }
+    .btn-delete {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      background: rgba(255,69,58,0.12);
+      border: 1px solid rgba(255,69,58,0.25);
+      color: #ff6b61;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      padding: 0 14px;
+      height: 44px;
+      cursor: pointer;
+      white-space: nowrap;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .btn-delete:hover { background: rgba(255,69,58,0.2); }
+    .btn-delete:active { opacity: 0.7; }
+    .btn-delete.confirming {
+      background: var(--red);
+      color: #fff;
+      border-color: var(--red);
+    }
+
+    /* ── Empty state ── */
+    .empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 64px 20px;
+      color: var(--text-muted);
+      gap: 14px;
+    }
+    .empty svg {
+      width: 48px; height: 48px;
+      stroke: var(--text-muted); fill: none;
+      stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round;
+      opacity: 0.6;
+    }
+    .empty p { font-size: 15px; line-height: 1.5; }
+
+    /* ── Feed tab ── */
+    .feed-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+    .feed-card .card-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      margin-bottom: 10px;
+    }
+    .feed-url-row {
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+    }
+    .feed-url-row input {
+      flex: 1;
+      font-size: 13px;
+      color: var(--text-sub);
+      padding: 10px 12px;
+    }
+    .btn-copy {
+      flex-shrink: 0;
+      min-width: 72px;
+      min-height: 44px;
+      padding: 0 16px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn-copy:active { transform: scale(0.96); opacity: 0.82; }
+
+    .how-to-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .how-to-item {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      background: var(--surface);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+    }
+    .how-to-icon { font-size: 24px; line-height: 1; flex-shrink: 0; }
+    .how-to-item strong {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+    .how-to-item p { font-size: 13px; color: var(--text-muted); margin: 0; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <header class="app-header">
+    <h1>Read<span class="logo-dot">Aloud</span></h1>
+  </header>
+
+  <main>
+
+    <!-- ══════════════════════════ ADD ARTICLE ══════════════════════════ -->
+    <section id="panel-add" class="tab-panel active">
+
+      <!-- Input method toggle -->
+      <div class="method-toggle" role="group" aria-label="Input method">
+        <button class="method-btn active" data-method="url">URL</button>
+        <button class="method-btn"        data-method="image">Image</button>
+        <button class="method-btn"        data-method="paste">Paste</button>
+      </div>
+
+      <!-- Error banner -->
+      <div id="add-error" class="msg error hidden" role="alert"></div>
+
+      <!-- ── URL ── -->
+      <div id="method-url" class="method-panel active">
+        <div class="field">
+          <label for="url-input">Article URL</label>
+          <input type="url" id="url-input"
+                 placeholder="https://…"
+                 autocomplete="off" autocorrect="off"
+                 autocapitalize="none" spellcheck="false">
+        </div>
+        <button class="btn btn-primary" id="btn-load-url">Load Article</button>
+      </div>
+
+      <!-- ── Image ── -->
+      <div id="method-image" class="method-panel">
+        <div class="field">
+          <label>Screenshot or Photo</label>
+          <label for="image-input" class="file-drop-label" id="file-drop">
+            <svg viewBox="0 0 24 24">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            <span class="drop-text" id="drop-text">Tap to choose image</span>
+          </label>
+          <input type="file" id="image-input" accept="image/*">
+        </div>
+        <button class="btn btn-primary" id="btn-load-image" disabled>Extract Text from Image</button>
+      </div>
+
+      <!-- ── Paste ── -->
+      <div id="method-paste" class="method-panel">
+        <div class="field">
+          <label for="paste-title">Title (optional)</label>
+          <input type="text" id="paste-title" placeholder="Article title…">
+        </div>
+        <div class="field">
+          <label for="paste-text">Article Text</label>
+          <textarea id="paste-text" placeholder="Paste article text here…"></textarea>
+        </div>
+        <button class="btn btn-primary" id="btn-use-paste">Use This Text</button>
+      </div>
+
+      <!-- ── Preview + generate (hidden until extraction done) ── -->
+      <div id="preview-section" class="hidden">
+        <hr class="divider">
+
+        <div class="preview-card">
+          <h2 id="preview-title"></h2>
+          <div class="preview-body" id="preview-body"></div>
+        </div>
+
+        <div class="speed-row">
+          <span class="speed-label">Speed</span>
+          <select id="speed-select" aria-label="Playback speed">
+            <option value="0.75">0.75×  —  Slower</option>
+            <option value="1.0" selected>1×  —  Normal</option>
+            <option value="1.25">1.25×  —  Faster</option>
+            <option value="1.5">1.5×  —  Fast</option>
+          </select>
+        </div>
+
+        <button class="btn btn-primary" id="btn-generate">Generate Audio</button>
+
+        <div id="audio-result" class="audio-result hidden">
+          <p class="audio-title" id="audio-title"></p>
+          <audio id="audio-player" controls></audio>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ══════════════════════════ LIBRARY ══════════════════════════ -->
+    <section id="panel-library" class="tab-panel">
+      <p class="section-label">Saved Articles</p>
+      <div id="library-list"></div>
+    </section>
+
+    <!-- ══════════════════════════ PODCAST FEED ══════════════════════════ -->
+    <section id="panel-feed" class="tab-panel">
+      <p class="section-label">Your Podcast Feed</p>
+
+      <div id="feed-error" class="msg error hidden" role="alert"></div>
+
+      <div class="feed-card">
+        <p class="card-label">RSS Feed URL</p>
+        <div class="feed-url-row">
+          <input type="text" id="feed-url-input" readonly placeholder="Loading…"
+                 aria-label="RSS feed URL">
+          <button class="btn-copy" id="btn-copy-feed">Copy</button>
+        </div>
+      </div>
+
+      <p class="section-label">How to Subscribe</p>
+      <div class="how-to-list">
+        <div class="how-to-item">
+          <span class="how-to-icon">🎙</span>
+          <div>
+            <strong>Apple Podcasts</strong>
+            <p>Library → Edit → Add a Podcast by URL → paste the link above</p>
+          </div>
+        </div>
+        <div class="how-to-item">
+          <span class="how-to-icon">☁️</span>
+          <div>
+            <strong>Overcast</strong>
+            <p>Add Podcast → paste the RSS URL into the search box</p>
+          </div>
+        </div>
+        <div class="how-to-item">
+          <span class="how-to-icon">📻</span>
+          <div>
+            <strong>Pocket Casts</strong>
+            <p>Discover → Add via URL → paste the link above</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ══════════════════════════ TAB BAR ══════════════════════════ -->
+  <nav class="tab-bar" role="tablist">
+    <button class="tab-btn active" data-panel="add" role="tab" aria-selected="true">
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="16"/>
+        <line x1="8"  y1="12" x2="16" y2="12"/>
+      </svg>
+      Add
+    </button>
+    <button class="tab-btn" data-panel="library" role="tab" aria-selected="false">
+      <svg viewBox="0 0 24 24">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      </svg>
+      Library
+    </button>
+    <button class="tab-btn" data-panel="feed" role="tab" aria-selected="false">
+      <svg viewBox="0 0 24 24">
+        <path d="M4 11a9 9 0 0 1 9 9"/>
+        <path d="M4 4a16 16 0 0 1 16 16"/>
+        <circle cx="5" cy="19" r="1.5" fill="currentColor" stroke="none"/>
+      </svg>
+      Feed
+    </button>
+  </nav>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  Helpers
+// ═══════════════════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+
+// Escape for innerHTML
+const esc = s => String(s ?? '')
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+  .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+// Escape for attribute values
+const escA = s => String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+
+function showError(msg) {
+  const el = $('add-error');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function clearError() { $('add-error').classList.add('hidden'); }
+
+function setLoading(btn, on, label = 'Loading…') {
+  if (on) {
+    btn._saved = btn.innerHTML;
+    btn.innerHTML = `<span class="spinner"></span>${label}`;
+    btn.disabled = true;
+  } else {
+    if (btn._saved != null) btn.innerHTML = btn._saved;
+    btn.disabled = false;
+  }
+}
+
+function formatDate(iso) {
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      month: 'short', day: 'numeric', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    }).format(new Date(iso));
+  } catch { return iso; }
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = e => resolve(e.target.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  Extraction state
+// ═══════════════════════════════════════════════════════════════
+let extracted = { title: '', text: '', sourceUrl: '' };
+
+function showPreview(title, text, sourceUrl = '') {
+  extracted = { title, text, sourceUrl };
+  $('preview-title').textContent = title || '(No title)';
+  $('preview-body').textContent  = text;
+  $('audio-result').classList.add('hidden');
+  $('preview-section').classList.remove('hidden');
+  setTimeout(() => {
+    $('preview-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 80);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  Tab switching
+// ═══════════════════════════════════════════════════════════════
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const panel = btn.dataset.panel;
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-selected', 'false');
+    });
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    btn.setAttribute('aria-selected', 'true');
+    $(`panel-${panel}`).classList.add('active');
+
+    if (panel === 'library') loadLibrary();
+    if (panel === 'feed')    loadFeedUrl();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Input method toggle
+// ═══════════════════════════════════════════════════════════════
+document.querySelectorAll('.method-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const m = btn.dataset.method;
+    document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.method-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    $(`method-${m}`).classList.add('active');
+    clearError();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  URL method
+// ═══════════════════════════════════════════════════════════════
+$('url-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') $('btn-load-url').click();
+});
+
+$('btn-load-url').addEventListener('click', async () => {
+  const url = $('url-input').value.trim();
+  if (!url)                    return showError('Please enter a URL.');
+  if (!url.startsWith('http')) return showError('Enter a full URL starting with http:// or https://');
+  clearError();
+
+  const btn = $('btn-load-url');
+  setLoading(btn, true, 'Extracting…');
+  try {
+    const res  = await fetch('/api/extract', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Extraction failed.');
+    showPreview(data.title, data.text, url);
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    setLoading(btn, false);
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Image method
+// ═══════════════════════════════════════════════════════════════
+let imageFile = null;
+
+$('image-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  imageFile = file;
+  $('file-drop').classList.add('has-file');
+  $('drop-text').textContent = file.name;
+  $('btn-load-image').disabled = false;
+});
+
+$('btn-load-image').addEventListener('click', async () => {
+  if (!imageFile) return showError('Please choose an image first.');
+  clearError();
+
+  const btn = $('btn-load-image');
+  setLoading(btn, true, 'Reading image…');
+  try {
+    const b64      = await fileToBase64(imageFile);
+    const mimeType = imageFile.type || 'image/jpeg';
+
+    const res  = await fetch('/api/ocr', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageData: b64, mimeType }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'OCR failed.');
+    showPreview(data.title, data.text);
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    setLoading(btn, false);
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Paste method
+// ═══════════════════════════════════════════════════════════════
+$('btn-use-paste').addEventListener('click', () => {
+  const title = $('paste-title').value.trim();
+  const text  = $('paste-text').value.trim();
+  if (!text) return showError('Please paste some article text first.');
+  clearError();
+  showPreview(title || 'Untitled', text);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Generate audio
+// ═══════════════════════════════════════════════════════════════
+$('btn-generate').addEventListener('click', async () => {
+  if (!extracted.text) return showError('No text to convert — extract an article first.');
+  clearError();
+
+  const btn   = $('btn-generate');
+  const speed = parseFloat($('speed-select').value);
+  setLoading(btn, true, 'Generating audio…');
+
+  try {
+    const res  = await fetch('/api/generate-audio', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title:     extracted.title,
+        text:      extracted.text,
+        sourceUrl: extracted.sourceUrl,
+        speed,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Audio generation failed.');
+
+    const player = $('audio-player');
+    player.src = data.audioUrl;
+    player.load();
+    $('audio-title').textContent = `"${data.title}"`;
+    $('audio-result').classList.remove('hidden');
+    setTimeout(() => {
+      $('audio-result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 80);
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    setLoading(btn, false);
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Library
+// ═══════════════════════════════════════════════════════════════
+async function loadLibrary() {
+  const list = $('library-list');
+  list.innerHTML = '<p style="color:var(--text-muted);font-size:14px;padding:8px 0;">Loading…</p>';
+
+  try {
+    const res      = await fetch('/api/articles');
+    if (!res.ok) throw new Error(`Server error ${res.status}`);
+    const articles = await res.json();
+
+    if (!articles.length) {
+      list.innerHTML = `
+        <div class="empty">
+          <svg viewBox="0 0 24 24">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+          <p>No articles yet.<br>Head to <strong>Add</strong> to create one.</p>
+        </div>`;
+      return;
+    }
+
+    const sorted = [...articles].sort((a, b) => new Date(b.date) - new Date(a.date));
+    list.innerHTML = sorted.map(a => {
+      const audioSrc = `/recordings/${escA(a.audioFilename)}`;
+      const source   = a.sourceUrl
+        ? `<a class="source-link" href="${escA(a.sourceUrl)}" target="_blank" rel="noopener noreferrer">${esc(a.sourceUrl)}</a>`
+        : '';
+      return `
+        <div class="article-card" data-id="${escA(a.id)}">
+          <h3>${esc(a.title)}</h3>
+          <div class="card-meta">
+            <span class="chip">${esc(formatDate(a.date))}</span>
+          </div>
+          ${source}
+          <div class="card-footer">
+            <audio controls src="${audioSrc}"></audio>
+            <button class="btn-delete" data-id="${escA(a.id)}" aria-label="Delete article">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+              </svg>
+              Delete
+            </button>
+          </div>
+        </div>`;
+    }).join('');
+
+    // Delete handler is attached once on panel-library (see bottom of script)
+  } catch (err) {
+    list.innerHTML = `<div class="msg error">Failed to load library: ${esc(err.message)}</div>`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  Delete — single delegated listener on the static library panel
+// ═══════════════════════════════════════════════════════════════
+$('panel-library').addEventListener('click', async e => {
+      const btn = e.target.closest('.btn-delete');
+      if (!btn) return;
+
+      if (!btn.classList.contains('confirming')) {
+        btn.classList.add('confirming');
+        btn.textContent = 'Tap again to confirm';
+        setTimeout(() => {
+          btn.classList.remove('confirming');
+          btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg> Delete`;
+        }, 3000);
+        return;
+      }
+
+      const id   = btn.dataset.id;
+      const card = $('library-list').querySelector(`.article-card[data-id="${id}"]`);
+      btn.disabled = true;
+      btn.textContent = 'Deleting…';
+
+      try {
+        const res = await fetch(`/api/articles/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || `Server error ${res.status}`);
+        }
+        // Fade out then remove
+        card.style.transition = 'opacity 0.25s, transform 0.25s';
+        card.style.opacity    = '0';
+        card.style.transform  = 'scale(0.97)';
+        setTimeout(() => {
+          card.remove();
+          if (!$('library-list').querySelector('.article-card')) loadLibrary();
+        }, 260);
+      } catch (err) {
+        btn.disabled = false;
+        btn.classList.remove('confirming');
+        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg> Delete`;
+        // Show error above the card
+        const errEl = document.createElement('div');
+        errEl.className = 'msg error';
+        errEl.textContent = `Delete failed: ${err.message}`;
+        card.insertAdjacentElement('beforebegin', errEl);
+        setTimeout(() => errEl.remove(), 5000);
+      }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Podcast feed
+// ═══════════════════════════════════════════════════════════════
+async function loadFeedUrl() {
+  $('feed-error').classList.add('hidden');
+  try {
+    const res = await fetch('/api/feed-url');
+    if (!res.ok) throw new Error(`Server error ${res.status}`);
+    const data = await res.json();
+    if (!data.feedUrl) throw new Error('Server returned an empty feed URL.');
+    $('feed-url-input').value = data.feedUrl;
+  } catch (err) {
+    $('feed-url-input').value = '';
+    $('feed-error').textContent = `Could not load feed URL: ${err.message}`;
+    $('feed-error').classList.remove('hidden');
+  }
+}
+
+$('btn-copy-feed').addEventListener('click', () => {
+  const val = $('feed-url-input').value;
+  if (!val) return;
+
+  const btn  = $('btn-copy-feed');
+  const done = () => {
+    const prev = btn.textContent;
+    btn.textContent = 'Copied ✓';
+    btn.style.background = 'var(--green)';
+    setTimeout(() => {
+      btn.textContent = prev;
+      btn.style.background = '';
+    }, 2200);
+  };
+
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(val).then(done).catch(() => {
+      $('feed-url-input').select();
+      document.execCommand('copy');
+      done();
+    });
+  } else {
+    $('feed-url-input').select();
+    document.execCommand('copy');
+    done();
+  }
+});
+</script>
+</body>
+</html>
