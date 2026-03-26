@@ -421,6 +421,8 @@ app.get('/podcast/feed.xml', async (req, res) => {
     <lastBuildDate>${now}</lastBuildDate>
     <atom:link href="${escapeXml(feedUrl)}" rel="self" type="application/rss+xml"/>
     <itunes:author>ReadAloud</itunes:author>
+    <itunes:image href="${escapeXml(baseUrl)}/podcast-cover.jpg"/>
+    <image><url>${escapeXml(baseUrl)}/podcast-cover.jpg</url><title>ReadAloud</title><link>${escapeXml(baseUrl)}</link></image>
     <itunes:explicit>false</itunes:explicit>
     <itunes:category text="Technology"/>
     ${items.join('\n    ')}
